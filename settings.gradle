@@ -1,2 +1,3 @@
+include ':hdcamera'
 include ':app'
 rootProject.name = "WtCamera"
