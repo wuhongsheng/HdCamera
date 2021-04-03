@@ -13,6 +13,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.hd.hdcamera.ui.CaptureListener
 import com.wt.wtcamera.databinding.ActivityMainBinding
 import java.io.File
 import java.text.SimpleDateFormat
@@ -20,7 +21,7 @@ import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), View.OnClickListener {
+class MainActivity : AppCompatActivity(), View.OnClickListener, CaptureListener {
 
     private var imageCapture: ImageCapture? = null
 
@@ -43,12 +44,15 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         // Set up the listener for take photo button
-        mBinding.cameraCaptureButton.setOnClickListener { takePhoto() }
+        mBinding.cameraCaptureButton.setCaptureListener(this)
         mBinding.ivFlipCamera.setOnClickListener(this)
+
 
         outputDirectory = getOutputDirectory()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+
     }
 
 
@@ -178,5 +182,30 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         if(p0!!.id == R.id.iv_flip_camera){
             toggleFrontBackCamera();
         }
+    }
+
+    override fun takePictures() {
+        takePhoto();
+        mBinding.tvTip.visibility = View.INVISIBLE
+    }
+
+    override fun recordShort(time: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordStart() {
+        mBinding.tvTip.visibility = View.INVISIBLE
+    }
+
+    override fun recordEnd(time: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordZoom(zoom: Float) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordError() {
+        TODO("Not yet implemented")
     }
 }
