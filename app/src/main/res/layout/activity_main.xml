@@ -11,19 +11,14 @@
             android:id="@+id/viewFinder"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-
-
         <ImageView
             android:id="@+id/iv_flip_camera"
-            android:text="切换摄像头"
             android:layout_margin="30dp"
             android:src="@drawable/ic_flip_camera"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
-
-
 
         <com.hd.hdcamera.ui.CaptureButton
             android:id="@+id/camera_capture_button"
@@ -56,8 +51,5 @@
             android:id="@+id/iv_back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
-
-
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

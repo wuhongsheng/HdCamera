@@ -22,8 +22,8 @@
 
 
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="android:windowFullscreen">true</item>
-        <item name="windowNoTitle">true</item>
+       <!-- <item name="android:windowFullscreen">true</item>
+        <item name="windowNoTitle">true</item>-->
     </style>
 
 </resources>

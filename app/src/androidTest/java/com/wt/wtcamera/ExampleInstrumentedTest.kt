@@ -2,6 +2,7 @@ package com.wt.wtcamera
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.hd.hdcamera.util.CommonUtil
 
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -20,5 +21,12 @@ class ExampleInstrumentedTest {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertEquals("com.wt.wtcamera", appContext.packageName)
+    }
+
+
+    @Test
+    fun idCardNumber(){
+        var str = "34011119911004501X"
+        println("idCardNumber:"+ CommonUtil.isIDcardNumber(str))
     }
 }
