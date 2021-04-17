@@ -1,4 +1,4 @@
-package com.wt.wtcamera
+package com.hd.hdcamera.imageanalysis
 
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 typealias LumaListener = (luma: Double) -> Unit
 
 /**
- * description
+ * 平均亮度
  * @author whs
  * @date 2021/3/22
  */

@@ -4,7 +4,7 @@
 
     <application>
         <activity
-            android:name=".ui.IDcardActivity"
+            android:name=".ui.CommonOcrActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

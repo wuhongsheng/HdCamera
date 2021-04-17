@@ -35,7 +35,7 @@ import java.io.IOException
 import java.util.concurrent.ExecutorService
 
 
-class IDcardActivity : AppCompatActivity() {
+class IdCardActivity : AppCompatActivity() {
 
     private var imageCapture: ImageCapture? = null
 
@@ -45,9 +45,7 @@ class IDcardActivity : AppCompatActivity() {
     private lateinit var mBinding:OcrIdcardActBinding
 
 
-    private val TAG: String = IDcardActivity::class.java.simpleName
-    val OPEN_GALLERY_REQUEST_CODE = 0
-    val TAKE_PHOTO_REQUEST_CODE = 1
+    private val TAG: String = IdCardActivity::class.java.simpleName
 
     val REQUEST_LOAD_MODEL = 0
     val REQUEST_RUN_MODEL = 1
@@ -296,7 +294,7 @@ class IDcardActivity : AppCompatActivity() {
             // Update UI
             mBinding.tvInputSetting.text = """
         Model: ${modelPath.substring(modelPath.lastIndexOf("/") + 1)}
-        CPU Thread Num: ${Integer.toString(cpuThreadNum)}
+        CPU Thread Num: $cpuThreadNum
         CPU Power Mode: $cpuPowerMode
         """.trimIndent()
             mBinding.tvInputSetting.scrollTo(0, 0)

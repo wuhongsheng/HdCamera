@@ -1,4 +1,4 @@
-package com.wt.wtcamera
+package com.hd.hdcamera.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -13,28 +13,29 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.hd.hdcamera.R
+import com.hd.hdcamera.databinding.CameraActBinding
 import com.hd.hdcamera.imageanalysis.LuminosityAnalyzer
-import com.wt.wtcamera.databinding.ActivityMainBinding
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class FlowCameraActivity : AppCompatActivity(), View.OnClickListener {
+class PhotoOrVIdeoActivity : AppCompatActivity(), View.OnClickListener, CaptureListener {
 
     private var imageCapture: ImageCapture? = null
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
 
-    private lateinit var mBinding: ActivityMainBinding
+    private lateinit var mBinding: CameraActBinding
 
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mBinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        mBinding = DataBindingUtil.setContentView(this, R.layout.camera_act)
         // Request camera permissions
         if (allPermissionsGranted()) {
             startCamera()
@@ -44,12 +45,12 @@ class FlowCameraActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         // Set up the listener for take photo button
-        mBinding.cameraCaptureButton.setOnClickListener { takePhoto() }
+        mBinding.cameraCaptureButton.setCaptureListener(this)
         mBinding.ivFlipCamera.setOnClickListener(this)
 
         outputDirectory = getOutputDirectory()
-
         cameraExecutor = Executors.newSingleThreadExecutor()
+
     }
 
 
@@ -106,7 +107,7 @@ class FlowCameraActivity : AppCompatActivity(), View.OnClickListener {
                         it.setSurfaceProvider(mBinding.viewFinder.surfaceProvider)
                     }
 
-            // 图像分析
+
             val imageAnalyzer = ImageAnalysis.Builder()
                     .build()
                     .also {
@@ -179,5 +180,30 @@ class FlowCameraActivity : AppCompatActivity(), View.OnClickListener {
         if(p0!!.id == R.id.iv_flip_camera){
             toggleFrontBackCamera();
         }
+    }
+
+    override fun takePictures() {
+        takePhoto();
+        mBinding.tvTip.visibility = View.INVISIBLE
+    }
+
+    override fun recordShort(time: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordStart() {
+        mBinding.tvTip.visibility = View.INVISIBLE
+    }
+
+    override fun recordEnd(time: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordZoom(zoom: Float) {
+        TODO("Not yet implemented")
+    }
+
+    override fun recordError() {
+        TODO("Not yet implemented")
     }
 }

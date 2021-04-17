@@ -13,6 +13,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
+import com.hd.hdcamera.imageanalysis.LuminosityAnalyzer
 import com.hd.hdcamera.ui.CaptureListener
 import com.wt.wtcamera.databinding.ActivityMainBinding
 import java.io.File
@@ -49,7 +50,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, CaptureListener 
 
 
         outputDirectory = getOutputDirectory()
-
         cameraExecutor = Executors.newSingleThreadExecutor()
 
 
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener, CaptureListener 
             val preview = Preview.Builder()
                     .build()
                     .also {
-                        it.setSurfaceProvider(mBinding!!.viewFinder.surfaceProvider)
+                        it.setSurfaceProvider(mBinding.viewFinder.surfaceProvider)
                     }
 
 
