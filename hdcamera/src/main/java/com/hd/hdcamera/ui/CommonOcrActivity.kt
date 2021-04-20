@@ -196,7 +196,7 @@ class CommonOcrActivity : AppCompatActivity() {
                 Log.i(TAG, "FILEPATH " + getExternalFilesDir("Pictures")!!.absolutePath)
                 val photoURI = FileProvider.getUriForFile(
                     this,
-                    "com.baidu.paddle.lite.demo.ocr.fileprovider",
+                    "com.hd.hdcamera.fileprovider",
                     photoFile
                 )
                 currentPhotoPath = photoFile.absolutePath
