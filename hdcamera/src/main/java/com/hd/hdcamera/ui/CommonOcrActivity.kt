@@ -20,6 +20,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -89,6 +90,10 @@ class CommonOcrActivity : AppCompatActivity() {
     private var currentPhotoPath: String? = null
 
     private lateinit var mContext: Context
+
+    companion object {
+        private const val TAG = "CommonOcrActivity"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

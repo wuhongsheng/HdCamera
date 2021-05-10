@@ -5,51 +5,12 @@
     xmlns:tools="http://schemas.android.com/tools">
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:context=".MainActivity">
-        <androidx.camera.view.PreviewView
-            android:id="@+id/viewFinder"
+        android:layout_height="match_parent">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/list_item"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-        <ImageView
-            android:id="@+id/iv_flip_camera"
-            android:layout_margin="30dp"
-            android:src="@drawable/ic_flip_camera"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <com.hd.hdcamera.ui.CaptureButton
-            android:id="@+id/camera_capture_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="50dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <TextView
-            android:layout_marginBottom="30dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toTopOf="@+id/camera_capture_button"
-            android:id="@+id/tv_tip"
-            android:textColor="@color/white"
-            android:text="轻触拍照，长按摄像"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-
-        <ImageView
-            android:background="@drawable/bg_back"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/camera_capture_button"
-            app:layout_constraintBottom_toBottomOf="@+id/camera_capture_button"
-            app:layout_constraintEnd_toStartOf="@+id/camera_capture_button"
-            android:src="@drawable/ic_arrow_down"
-            android:id="@+id/iv_back"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
