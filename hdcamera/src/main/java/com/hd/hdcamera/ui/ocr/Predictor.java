@@ -121,8 +121,11 @@ public class Predictor {
 
         OCRPredictorNative.Config config = new OCRPredictorNative.Config();
         config.cpuThreadNum = cpuThreadNum;
+        //检测模型
         config.detModelFilename = realPath + File.separator + "ch_det_mv3_db_opt.nb";
+        //识别模型
         config.recModelFilename = realPath + File.separator + "ch_rec_mv3_crnn_opt.nb";
+        //config.recModelFilename = realPath + File.separator + "ch_ppocr_mobile_v1.1_rec_quant_opt";
         config.clsModelFilename = realPath + File.separator + "cls_opt_arm.nb";
         Log.e("Predictor", "model path" + config.detModelFilename + " ; " + config.recModelFilename + ";" + config.clsModelFilename);
         config.cpuPower = cpuPowerMode;

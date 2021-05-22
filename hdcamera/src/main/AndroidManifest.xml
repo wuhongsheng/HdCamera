@@ -20,6 +20,7 @@
             android:screenOrientation="portrait">
         </activity>
 
+        <!-- FileProvider used to share media with other apps -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.hd.hdcamera.fileprovider"
