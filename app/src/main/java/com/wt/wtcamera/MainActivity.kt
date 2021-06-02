@@ -9,14 +9,16 @@ import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.listener.OnItemClickListener
 import com.hd.hdcamera.ui.CommonOcrActivity
 import com.hd.hdcamera.ui.PhotoOrVideoActivity
+import com.hd.hdcamera.ui.RtmpActivity
 import com.wt.wtcamera.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), OnItemClickListener {
 
     private lateinit var mBinding: ActivityMainBinding
 
-    private val titleList = arrayOf("拍照/录像", "通用OCR", "车牌OCR");
-    private val classList = arrayOf(PhotoOrVideoActivity::class.java, CommonOcrActivity::class.java, CommonOcrActivity::class.java)
+    private val titleList = arrayOf("拍照/录像","RTMP推流", "通用OCR", "车牌OCR");
+    private val classList = arrayOf(PhotoOrVideoActivity::class.java, RtmpActivity::class.java,
+        CommonOcrActivity::class.java, CommonOcrActivity::class.java)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

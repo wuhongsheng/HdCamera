@@ -39,15 +39,12 @@
             android:text="@string/take_photo_tip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-
-
         <ImageView
-            android:background="@drawable/bg_back"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@+id/camera_capture_button"
             app:layout_constraintBottom_toBottomOf="@+id/camera_capture_button"
             app:layout_constraintEnd_toStartOf="@+id/camera_capture_button"
-            app:srcCompat="@drawable/ic_arrow_down"
+            app:srcCompat="@drawable/ic_arrow_drop_down"
             android:id="@+id/iv_back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>

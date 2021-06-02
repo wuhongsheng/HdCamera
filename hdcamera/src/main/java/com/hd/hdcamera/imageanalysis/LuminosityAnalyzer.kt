@@ -1,7 +1,9 @@
 package com.hd.hdcamera.imageanalysis
 
+import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import com.hd.hdcamera.ui.PhotoOrVideoActivity
 import java.nio.ByteBuffer
 
 /** Helper type alias used for analysis use case callbacks */
@@ -21,8 +23,9 @@ class LuminosityAnalyzer(private val listener: LumaListener) : ImageAnalysis.Ana
         return data // Return the byte array
     }
 
-    override fun analyze(image: ImageProxy) {
 
+    override fun analyze(image: ImageProxy) {
+        Log.d("LuminosityAnalyzer", "analyze")
         val buffer = image.planes[0].buffer
         val data = buffer.toByteArray()
         val pixels = data.map { it.toInt() and 0xFF }

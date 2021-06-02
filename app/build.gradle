@@ -7,7 +7,7 @@ plugins {
 
 android {
     compileSdkVersion 30
-    buildToolsVersion "30.0.2"
+    buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "com.wt.wtcamera"
@@ -15,8 +15,11 @@ android {
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
-
+        vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk{
+            abiFilters 'armeabi-v7a'
+        }
     }
 
     buildTypes {
@@ -25,6 +28,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -35,6 +40,7 @@ android {
     buildFeatures {
         dataBinding true
     }
+
 }
 
 dependencies {
@@ -52,11 +58,7 @@ dependencies {
     implementation 'com.github.xionger0520:flowcamera:V1.1.5'
     implementation 'com.github.CymChad:BaseRecyclerViewAdapterHelper:3.0.4'
 
-
     implementation project(':hdcamera')
-
-
-
 
 
 }

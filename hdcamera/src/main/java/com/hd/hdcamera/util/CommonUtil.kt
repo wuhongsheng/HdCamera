@@ -1,6 +1,9 @@
 package com.hd.hdcamera.util
 
+import android.content.ContentValues
+import android.content.Context
 import android.text.TextUtils
+import java.io.File
 import java.util.regex.Pattern
 
 /**
@@ -25,6 +28,24 @@ class CommonUtil {
             val pattern = Pattern.compile(telRegex)
             val matcher = pattern.matcher(mobiles)
             return matcher.matches()
+        }
+
+
+        fun getVideoContentValues(
+            paramContext: Context?,
+            paramFile: File,
+            paramLong: Long
+        ): ContentValues? {
+            val localContentValues = ContentValues()
+            localContentValues.put("title", paramFile.name)
+            localContentValues.put("_display_name", paramFile.name)
+            localContentValues.put("mime_type", "video/3gp")
+            localContentValues.put("datetaken", paramLong)
+            localContentValues.put("date_modified", paramLong)
+            localContentValues.put("date_added", paramLong)
+            localContentValues.put("_data", paramFile.absolutePath)
+            localContentValues.put("_size", paramFile.length())
+            return localContentValues
         }
     }
 }

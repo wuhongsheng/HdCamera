@@ -1,24 +1,20 @@
 package com.hd.hdcamera.ui
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.media.MediaCodec
-import android.media.MediaRecorder
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore.Video
 import android.util.Log
-import android.view.Surface
 import android.view.View
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.annotation.NonNull
-import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -27,34 +23,30 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.lifecycleScope
-import com.hd.hdcamera.BuildConfig
 import com.hd.hdcamera.R
 import com.hd.hdcamera.databinding.CameraActBinding
-import com.hd.hdcamera.imageanalysis.LuminosityAnalyzer
+import com.hd.hdcamera.util.CommonUtil
 import com.hd.hdcamera.util.OrientationLiveData
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.log
 
 class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureListener {
 
-    private var imageCapture: ImageCapture? = null
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
 
     private lateinit var mBinding: CameraActBinding
 
-
     /** Live data listener for changes in the device orientation relative to the camera */
     private lateinit var relativeOrientation: OrientationLiveData
-
+    //拍照用例
+    private var imageCapture: ImageCapture? = null
     //录像用例
     private var videoCapture: VideoCapture? = null
     //预览对象
@@ -96,6 +88,7 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
         mBinding.ivFlipCamera.setOnClickListener(this)
         mBinding.ivBack.setOnClickListener(this)
 
+
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
@@ -105,7 +98,6 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
                     orientation -> Log.d(TAG, "Orientation changed: $orientation")
             })
         }
-
     }
 
 
@@ -149,9 +141,13 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
         startCamera()
     }
 
+
+
+    /**
+     * 开启相机
+     */
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener(Runnable {
             // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
@@ -164,13 +160,13 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
                     }
 
 
-            val imageAnalyzer = ImageAnalysis.Builder()
+           /* val imageAnalyzer = ImageAnalysis.Builder()
                     .build()
                     .also {
                         it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
                             Log.d(TAG, "Average luminosity: $luma")
                         })
-                    }
+                    }*/
 
 
             // Select back camera as a default
@@ -180,17 +176,19 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
             //录像用例配置
             videoCapture = VideoCapture.Builder()
                 //.setTargetAspectRatio(AspectRatio.RATIO_16_9) //设置高宽比
-                //.setTargetRotation(relativeOrientation.value)//设置旋转角度
+                //.setTargetRotation(relativeOrientation.value!!)//设置旋转角度
                 //.setAudioRecordSource(MediaRecorder.AudioSource.MIC)//设置音频源麦克风
                 .build()
 
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
-
                 // Bind use cases to camera
+              /*  cameraProvider.bindToLifecycle(
+                    this, cameraSelector, preview, imageCapture,videoCapture,imageAnalyzer)*/
                 cameraProvider.bindToLifecycle(
                         this, cameraSelector, preview, imageCapture,videoCapture)
+
 
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
@@ -218,9 +216,6 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
 
     companion object {
         private val TAG = PhotoOrVideoActivity::class.java.simpleName
-
-        private const val RECORDER_VIDEO_BITRATE: Int = 10_000_000
-        private const val MIN_REQUIRED_RECORDING_TIME_MILLIS: Long = 1000L
 
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
@@ -296,7 +291,6 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
             return
         }
-
         videoCapture?.startRecording(VideoCapture.OutputFileOptions.Builder(outputFile).build(), Executors.newSingleThreadExecutor(), object :
             VideoCapture.OnVideoSavedCallback {
             override fun onVideoSaved(@NonNull file: VideoCapture.OutputFileResults) {
@@ -305,9 +299,18 @@ class PhotoOrVideoActivity : AppCompatActivity(), View.OnClickListener, CaptureL
                     Toast.makeText(mContext, file.savedUri.toString(), Toast.LENGTH_SHORT).show()
                     Log.d(TAG, "文件已保存到:" + file.savedUri.toString())
                     // Broadcasts the media file to the rest of the system
-                    MediaScannerConnection.scanFile(
+                  /*  MediaScannerConnection.scanFile(
                         mContext, arrayOf(outputFile.absolutePath), null, null
+                    )*/
+
+
+                    val localContentValues: ContentValues? = CommonUtil.getVideoContentValues(
+                        mContext.applicationContext,
+                        outputFile,
+                        System.currentTimeMillis()
                     )
+                    val localUri: Uri? = mContext.contentResolver
+                        .insert(Video.Media.EXTERNAL_CONTENT_URI, localContentValues)
 
                     // Launch external activity via intent to play video recorded using our provider
                     startActivity(Intent().apply {
