@@ -19,14 +19,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import com.hd.hdcamera.R
-import com.hd.hdcamera.databinding.CameraActBinding
 import com.hd.hdcamera.databinding.RtmpPushActBinding
-import com.hd.hdcamera.imageanalysis.RtmpAnalyzer
+import com.hd.hdcamera.rtmp.ImageUtils
 import com.hd.hdcamera.rtmp.RtmpClient
 import com.hd.hdcamera.util.OrientationLiveData
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -64,21 +60,14 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
     private var rtmpClient:RtmpClient?=null
 
     companion object {
-        private const val mWidth = 480
-        private const val mHeight = 640
         private val TAG = RtmpActivity::class.java.simpleName
         private const val rtmpUrl = "rtmp://172.16.0.178/live/livestream"
 
         private const val REQUEST_CODE_PERMISSIONS = 10
 
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        //默认启用后置摄像头
         private var lensFacing = CameraSelector.LENS_FACING_BACK
-
-        /** Creates a [File] named with the current date and time */
-        private fun createRecordFile(context: Context, extension: String): File {
-            val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
-            return File(context.filesDir, "VID_${sdf.format(Date())}.$extension")
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,9 +99,9 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
         }
 
 
-        rtmpClient = RtmpClient(this)
+        rtmpClient = RtmpClient(RtmpClient.EncodeStrategy.SOFT_ENCODER)
         //初始化摄像头， 同时 创建编码器
-        rtmpClient?.initVideo( mWidth, mHeight, 25, 640000)
+        rtmpClient?.initVideo(640_000)
         rtmpClient?.initAudio(44100, 2)
 
     }
@@ -152,13 +141,27 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
                         it.setSurfaceProvider(mBinding.viewFinder.surfaceProvider)
                     }
 
-
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .setTargetResolution(Size(mWidth, mHeight))
+                .setTargetResolution(Size(rtmpClient!!.width, rtmpClient!!.height))
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor,RtmpAnalyzer(rtmpClient!!))
+                    it.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { image ->
+                        val rotationDegrees = image.imageInfo.rotationDegrees
+                        // insert your code here.
+                        //Log.e(TAG, "analyze")
+                        // 开启直播并且已经成功连接服务器才获取i420数据
+                        if (rtmpClient!!.isConnectd) {
+                            val bytes = ImageUtils.getBytes(
+                                image,
+                                image.imageInfo.rotationDegrees,
+                                rtmpClient!!.width,
+                                rtmpClient!!.height
+                            )
+                            rtmpClient?.sendVideo(bytes)
+                        }
+                        image.close()
+                    })
                 }
 
 
@@ -188,6 +191,7 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        rtmpClient?.release()
     }
 
 

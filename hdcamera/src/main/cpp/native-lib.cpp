@@ -168,6 +168,19 @@ Java_com_hd_hdcamera_rtmp_RtmpClient_nativeSendVideo(JNIEnv *env, jobject thiz,
 }
 
 extern "C"
+JNIEXPORT void JNICALL
+Java_com_hd_hdcamera_rtmp_SoftEncoder_nativeSendVideo(JNIEnv *env, jobject thiz,
+                                                     jbyteArray buffer) {
+    jbyte *data = env->GetByteArrayElements(buffer, 0);
+    pthread_mutex_lock(&mutex);
+    //编码与推流
+    videoChannel->encode(reinterpret_cast<uint8_t *>(data));
+    pthread_mutex_unlock(&mutex);
+
+    env->ReleaseByteArrayElements(buffer, data, 0);
+}
+
+extern "C"
 JNIEXPORT jint JNICALL
 Java_com_hd_hdcamera_rtmp_RtmpClient_initAudioEnc(JNIEnv *env, jobject thiz,
                                                               jint sample_rate, jint channels) {
@@ -190,6 +203,17 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_hd_hdcamera_rtmp_RtmpClient_nativeSendAudio(JNIEnv *env, jobject thiz,
                                                                  jbyteArray buffer, jint len) {
+    jbyte *data = env->GetByteArrayElements(buffer, 0);
+    pthread_mutex_lock(&mutex);
+    audioChannel->encode(reinterpret_cast<int32_t *>(data), len);
+    pthread_mutex_unlock(&mutex);
+    env->ReleaseByteArrayElements(buffer, data, 0);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_hd_hdcamera_rtmp_SoftEncoder_nativeSendAudio(JNIEnv *env, jobject thiz,
+                                                     jbyteArray buffer, jint len) {
     jbyte *data = env->GetByteArrayElements(buffer, 0);
     pthread_mutex_lock(&mutex);
     audioChannel->encode(reinterpret_cast<int32_t *>(data), len);

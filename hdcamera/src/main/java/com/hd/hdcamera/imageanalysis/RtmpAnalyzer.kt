@@ -14,7 +14,7 @@ import java.nio.ByteBuffer
  * @author whs
  * @date 2021/3/22
  */
-class RtmpAnalyzer(private val rtmp: RtmpClient) : ImageAnalysis.Analyzer {
+class RtmpAnalyzer(var rtmp: RtmpClient) : ImageAnalysis.Analyzer {
 
     override fun analyze(image: ImageProxy) {
         Log.d("RtmpAnalyzer", "analyze")

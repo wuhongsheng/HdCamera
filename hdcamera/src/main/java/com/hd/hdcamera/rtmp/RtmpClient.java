@@ -1,8 +1,13 @@
 package com.hd.hdcamera.rtmp;
 
 import android.util.Log;
+import android.util.Size;
 
-import androidx.lifecycle.LifecycleOwner;
+import androidx.annotation.NonNull;
+
+import com.blankj.utilcode.util.ToastUtils;
+
+import org.jetbrains.annotations.NotNull;
 
 /**
  * description
@@ -10,34 +15,78 @@ import androidx.lifecycle.LifecycleOwner;
  * @author whs
  * @date 2021/5/31
  */
-public class RtmpClient {
-
-    private static final String TAG = "---->RtmpClient<----";
-
+public class RtmpClient implements Encoder{
     static {
         System.loadLibrary("native-lib");
     }
+    private static final String TAG = "---->RtmpClient<----";
+    private int mWidth = 480, mHeight = 640;
 
-    private final LifecycleOwner lifecycleOwner;
-    private int width;
-    private int height;
+    @Override
+    public void audioEncode(@NotNull byte[] buffer, int size) {
+        encoder.audioEncode(buffer, size);
+    }
+
+    @Override
+    public void videoEncode(@NotNull byte[] buffer, int width, int height) {
+        encoder.videoEncode(buffer, width, height);
+    }
+
+
+    //编码策略
+    public enum EncodeStrategy{
+        HARD_ENCODER,
+        SOFT_ENCODER
+    }
+
+ /*   public void setEncodeStrategy(EncodeStrategy encodeStrategy) {
+        this.encodeStrategy = encodeStrategy;
+    }
+
+    private EncodeStrategy encodeStrategy = EncodeStrategy.SOFT_ENCODER;*/
+
+    private Encoder encoder;
+
     private boolean isConnectd;
-    //private VideoChanel videoChanel;
     private AudioChannel audioChannel;
 
-    public RtmpClient(LifecycleOwner lifecycleOwner) {
-        this.lifecycleOwner = lifecycleOwner;
+    public static final int VFPS = 24;
+
+
+    public RtmpClient() {
+        nativeInit();
+    }
+
+    public RtmpClient(EncodeStrategy encodeStrategy) {
+        switch (encodeStrategy){
+            case SOFT_ENCODER:
+                encoder = new SoftEncoder();
+                break;
+            case HARD_ENCODER:
+                encoder = new HardEncoder();
+                break;
+            default:
+                throw new IllegalArgumentException("There's no such strategy yet.");
+        }
         nativeInit();
     }
 
 
 
     public void initVideo(int width, int height, int fps, int bitRate) {
-        this.width = width;
-        this.height = height;
-        //videoChanel = new VideoChanel(this);
+        this.mWidth = width;
+        this.mHeight = height;
         initVideoEnc(width, height, fps, bitRate);
     }
+
+    public void initVideo(@NonNull Size resolution, int bitRate) {
+        initVideoEnc(resolution.getWidth(), resolution.getHeight(), VFPS, bitRate);
+    }
+
+    public void initVideo(int bitRate) {
+        initVideoEnc(mWidth, mHeight, VFPS, bitRate);
+    }
+
 
     public void initAudio(int sampleRate, int channels) {
         audioChannel = new AudioChannel(sampleRate, channels, this);
@@ -45,17 +94,14 @@ public class RtmpClient {
         audioChannel.setInputByteNum(inputByteNum);
     }
 
-    public void toggleCamera() {
-        //videoChanel.toggleCamera();
-    }
 
 
     public int getWidth() {
-        return width;
+        return mWidth;
     }
 
     public int getHeight() {
-        return height;
+        return mHeight;
     }
 
     public boolean isConnectd() {
@@ -76,8 +122,10 @@ public class RtmpClient {
             Log.e(TAG, "服务器连接成功==================");
             audioChannel.start();
             Log.e(TAG, "开始直播==================");
+            ToastUtils.showShort("服务器连接成功,开始直播");
         }else {
             Log.e(TAG, "服务器连接失败==================");
+            ToastUtils.showShort("服务器连接失败");
         }
     }
 
@@ -86,10 +134,12 @@ public class RtmpClient {
         audioChannel.stop();
         disConnect();
         Log.e(TAG, "停止直播==================");
+        ToastUtils.showShort("停止直播");
     }
 
     public void sendVideo(byte[] buffer) {
         nativeSendVideo(buffer);
+
     }
 
     public void sendAudio(byte[] buffer, int len) {
@@ -98,7 +148,6 @@ public class RtmpClient {
 
 
     public void release() {
-        //videoChanel.release();
         audioChannel.release();
         releaseVideoEnc();
         releaseAudioEnc();

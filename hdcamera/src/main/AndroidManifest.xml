@@ -20,6 +20,12 @@
             android:screenOrientation="portrait">
         </activity>
 
+        <activity
+            android:theme="@style/CaptureTheme"
+            android:name=".ui.RtmpActivity"
+            android:screenOrientation="portrait">
+        </activity>
+
         <!-- FileProvider used to share media with other apps -->
         <provider
             android:name="androidx.core.content.FileProvider"
