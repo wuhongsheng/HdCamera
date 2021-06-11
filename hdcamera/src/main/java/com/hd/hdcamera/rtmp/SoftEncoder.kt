@@ -15,6 +15,10 @@ class SoftEncoder :Encoder{
         nativeSendVideo(buffer)
     }
 
+    override fun releaseResources() {
+
+    }
+
     private external fun nativeSendVideo(buffer: ByteArray)
 
     private external fun nativeSendAudio(buffer: ByteArray, len: Int)

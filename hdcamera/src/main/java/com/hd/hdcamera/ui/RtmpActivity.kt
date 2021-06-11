@@ -23,6 +23,9 @@ import com.hd.hdcamera.databinding.RtmpPushActBinding
 import com.hd.hdcamera.rtmp.ImageUtils
 import com.hd.hdcamera.rtmp.RtmpClient
 import com.hd.hdcamera.util.OrientationLiveData
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -54,6 +57,8 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
     }
 
 
+    /** File where the recording will be saved */
+    private val outputFile: File by lazy {createRecordFile(this, "mp4") }
 
     private lateinit var mContext:Context
 
@@ -68,6 +73,13 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
         //默认启用后置摄像头
         private var lensFacing = CameraSelector.LENS_FACING_BACK
+
+
+        /** Creates a [File] named with the current date and time */
+        private fun createRecordFile(context: Context, extension: String): File {
+            val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
+            return File(context.filesDir, "VID_${sdf.format(Date())}.$extension")
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,10 +111,10 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
         }
 
 
+        //rtmpClient = RtmpClient(outputFile)
         rtmpClient = RtmpClient(RtmpClient.EncodeStrategy.SOFT_ENCODER)
-        //初始化摄像头， 同时 创建编码器
-        rtmpClient?.initVideo(640_000)
-        rtmpClient?.initAudio(44100, 2)
+
+
 
     }
 
@@ -191,7 +203,7 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
-        rtmpClient?.release()
+        rtmpClient?.releaseResources()
     }
 
 

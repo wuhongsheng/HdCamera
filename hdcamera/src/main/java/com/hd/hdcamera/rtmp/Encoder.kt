@@ -8,4 +8,5 @@ package com.hd.hdcamera.rtmp
 interface Encoder {
     fun audioEncode(buffer: ByteArray,size:Int)
     fun videoEncode(buffer: ByteArray,width:Int, height:Int)
+    fun releaseResources()
 }

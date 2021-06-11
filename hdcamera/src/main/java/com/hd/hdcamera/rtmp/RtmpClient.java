@@ -1,13 +1,12 @@
 package com.hd.hdcamera.rtmp;
 
 import android.util.Log;
-import android.util.Size;
-
-import androidx.annotation.NonNull;
 
 import com.blankj.utilcode.util.ToastUtils;
 
 import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
 
 /**
  * description
@@ -22,6 +21,10 @@ public class RtmpClient implements Encoder{
     private static final String TAG = "---->RtmpClient<----";
     private int mWidth = 480, mHeight = 640;
 
+    private int bitRate = 640_000;
+
+
+
     @Override
     public void audioEncode(@NotNull byte[] buffer, int size) {
         encoder.audioEncode(buffer, size);
@@ -32,6 +35,17 @@ public class RtmpClient implements Encoder{
         encoder.videoEncode(buffer, width, height);
     }
 
+    @Override
+    public void releaseResources() {
+        if(audioChannel != null){
+            audioChannel.release();
+            releaseVideoEnc();
+            releaseAudioEnc();
+            nativeDeInit();
+        }
+        encoder.releaseResources();
+    }
+
 
     //编码策略
     public enum EncodeStrategy{
@@ -39,11 +53,6 @@ public class RtmpClient implements Encoder{
         SOFT_ENCODER
     }
 
- /*   public void setEncodeStrategy(EncodeStrategy encodeStrategy) {
-        this.encodeStrategy = encodeStrategy;
-    }
-
-    private EncodeStrategy encodeStrategy = EncodeStrategy.SOFT_ENCODER;*/
 
     private Encoder encoder;
 
@@ -60,10 +69,13 @@ public class RtmpClient implements Encoder{
     public RtmpClient(EncodeStrategy encodeStrategy) {
         switch (encodeStrategy){
             case SOFT_ENCODER:
+                //初始化摄像头， 同时 创建编码器
+                initVideo(640_000);
+                initAudio(44100, 2);
                 encoder = new SoftEncoder();
                 break;
             case HARD_ENCODER:
-                encoder = new HardEncoder();
+                encoder = new HardEncoder(this);
                 break;
             default:
                 throw new IllegalArgumentException("There's no such strategy yet.");
@@ -73,15 +85,14 @@ public class RtmpClient implements Encoder{
 
 
 
-    public void initVideo(int width, int height, int fps, int bitRate) {
-        this.mWidth = width;
-        this.mHeight = height;
-        initVideoEnc(width, height, fps, bitRate);
+    public RtmpClient(@NotNull File outputFile) {
+        encoder = new HardEncoder(this,outputFile);
+        nativeInit();
     }
 
-    public void initVideo(@NonNull Size resolution, int bitRate) {
-        initVideoEnc(resolution.getWidth(), resolution.getHeight(), VFPS, bitRate);
-    }
+
+
+
 
     public void initVideo(int bitRate) {
         initVideoEnc(mWidth, mHeight, VFPS, bitRate);
@@ -130,29 +141,26 @@ public class RtmpClient implements Encoder{
     }
 
     public void stopLive() {
-        isConnectd = false;
+        //releaseResources();
         audioChannel.stop();
+        isConnectd = false;
         disConnect();
         Log.e(TAG, "停止直播==================");
         ToastUtils.showShort("停止直播");
     }
 
     public void sendVideo(byte[] buffer) {
-        nativeSendVideo(buffer);
-
+        encoder.videoEncode(buffer,mWidth,mHeight);
+        //nativeSendVideo(buffer);
     }
 
     public void sendAudio(byte[] buffer, int len) {
-        nativeSendAudio(buffer, len);
+        //nativeSendAudio(buffer, len);
+        encoder.audioEncode(buffer,len);
     }
 
 
-    public void release() {
-        audioChannel.release();
-        releaseVideoEnc();
-        releaseAudioEnc();
-        nativeDeInit();
-    }
+
 
 
     private native void connect(String url);
