@@ -71,6 +71,8 @@ public class AudioChannel {
     public void release() {
         handlerThread.quitSafely();
         handler.removeCallbacksAndMessages(null);
-        audioRecord.release();
+        if(audioRecord != null){
+            audioRecord.release();
+        }
     }
 }

@@ -6,6 +6,13 @@ package com.hd.hdcamera.rtmp
  * @date 2021/6/3
  */
 class SoftEncoder :Encoder{
+    override fun start() {
+
+    }
+
+    override fun stop() {
+        TODO("Not yet implemented")
+    }
 
     override fun audioEncode(buffer: ByteArray, size: Int) {
         nativeSendAudio(buffer, size)

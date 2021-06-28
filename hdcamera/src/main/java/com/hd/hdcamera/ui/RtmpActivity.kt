@@ -111,8 +111,8 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
         }
 
 
-        //rtmpClient = RtmpClient(outputFile)
-        rtmpClient = RtmpClient(RtmpClient.EncodeStrategy.SOFT_ENCODER)
+        rtmpClient = RtmpClient(outputFile)
+        //rtmpClient = RtmpClient(RtmpClient.EncodeStrategy.SOFT_ENCODER)
 
 
 
@@ -154,22 +154,23 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
                     }
 
             val imageAnalyzer = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                //.setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setTargetResolution(Size(rtmpClient!!.width, rtmpClient!!.height))
                 .build()
                 .also {
                     it.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { image ->
                         val rotationDegrees = image.imageInfo.rotationDegrees
                         // insert your code here.
-                        //Log.e(TAG, "analyze")
+                        Log.e(TAG, "analyze")
                         // 开启直播并且已经成功连接服务器才获取i420数据
-                        if (rtmpClient!!.isConnectd) {
+                        if (rtmpClient?.isConnectd!!) {
                             val bytes = ImageUtils.getBytes(
                                 image,
                                 image.imageInfo.rotationDegrees,
                                 rtmpClient!!.width,
                                 rtmpClient!!.height
                             )
+
                             rtmpClient?.sendVideo(bytes)
                         }
                         image.close()

@@ -205,6 +205,34 @@ void VideoChannel::sendFrame(int type, uint8_t *p_payload, int i_payload) {
 }
 
 
+/**
+ *
+ * @param type  视频帧类型
+ * @param buf  H264
+ * @param len H264 长度
+ */
+/*void VideoChannel::sendH264(int type, uint8_t *data, int dataLen, int timeStamp) {
+    //RTMPPacket *packet = (RTMPPacket *) malloc(sizeof(RTMPPacket));
+    RTMPPacket *packet = new RTMPPacket;
+
+    RTMPPacket_Alloc(packet, dataLen);
+    RTMPPacket_Reset(packet);
+
+    packet->m_nChannel = 0x04; //视频
+
+    if (type == NAL_SLICE_IDR) {
+        //LOGE("视频关键帧");
+    }
+    memcpy(packet->m_body, data, dataLen);
+    packet->m_headerType = RTMP_PACKET_SIZE_LARGE;
+    packet->m_hasAbsTimestamp = FALSE;
+    packet->m_packetType = RTMP_PACKET_TYPE_VIDEO;
+    packet->m_nBodySize = dataLen;
+    callback(packet);//发送给 rtmp 模块
+}*/
+
+
+
 void VideoChannel::setCallback(Callback callback) {
     this->callback = callback;
 }

@@ -1,10 +1,8 @@
 package com.hd.hdcamera.rtmp
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.media.*
 import android.media.MediaCodecInfo.CodecCapabilities
-import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
@@ -25,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class HardEncoder(
     var rtmpClient: RtmpClient
-) :Encoder{
+) : Encoder {
 
     constructor(rtmpClient: RtmpClient, outputFile: File) : this(rtmpClient) {
         this.rtmpClient = rtmpClient
@@ -34,32 +32,39 @@ class HardEncoder(
 
 
     private val TAG = "---->HardEncoder<----"
+
     /** Android preferred mime type for AVC video.  */
     private val VIDEO_MIME_TYPE = "video/avc"
     private val AUDIO_MIME_TYPE = "audio/mp4a-latm"
+
     /** Amount of time to wait for dequeuing a buffer from the videoEncoder.  */
     private val DEQUE_TIMEOUT_USEC = 10000
     private var mAudioEncoder: MediaCodec? = null
     private var mVideoEncoder: MediaCodec? = null
 
-    private var outputFile:File? = null
+    private var outputFile: File? = null
     val VFPS = 24
     val VGOP = 48
     val mAudioSampleRate = 44100
     val mAudioChannelCount = 2
-    private val bitRate = 640000
+    private val bitRate = 640_000   // 640 kbps
     val mAudioBitRate = 64 * 1024 // 64 kbps
+
+
+    private var mIsRecording = false
 
     /** audio raw data  */
     private var mAudioRecorder: AudioRecord? = null
-    private val mAudioBufferSize = 0
+    private var mAudioBufferSize = 0
 
     /** The muxer that writes the encoding data to file.  */
     @GuardedBy("mMuxerLock")
     private var mMuxer: MediaMuxer? = null
     private var mMuxerStarted = false
+
     /** The index of the video track used by the muxer.  */
     private var mVideoTrackIndex = 0
+
     /** The index of the audio track used by the muxer.  */
     private var mAudioTrackIndex = 0
 
@@ -73,7 +78,7 @@ class HardEncoder(
 
 
     private val mVideoBufferInfo = MediaCodec.BufferInfo()
-    private val mMuxerLock = Any()
+    private val mMuxerLock = Object()
     private val mEndOfVideoStreamSignal = AtomicBoolean(true)
     private val mEndOfAudioStreamSignal = AtomicBoolean(true)
     private val mEndOfAudioVideoSignal = AtomicBoolean(true)
@@ -83,8 +88,25 @@ class HardEncoder(
     private val mIsFirstVideoSampleWrite = AtomicBoolean(false)
     private val mIsFirstAudioSampleWrite = AtomicBoolean(false)
 
+    private var mPresentTimeUs: Long = 0
+
+
+    /**
+     * Audio encoding
+     *
+     *
+     * the result of PCM_8BIT and PCM_FLOAT are not good. Set PCM_16BIT as the first option.
+     */
+    private val sAudioEncoding = shortArrayOf(
+        AudioFormat.ENCODING_PCM_16BIT.toShort(),
+        AudioFormat.ENCODING_PCM_8BIT.toShort(),
+        AudioFormat.ENCODING_PCM_FLOAT
+            .toShort()
+    )
+
+
     init {
-        Log.e(TAG,"init")
+        Log.e(TAG, "init")
         // video thread start
         mVideoHandlerThread.start()
         mVideoHandler = Handler(mVideoHandlerThread.looper)
@@ -94,36 +116,83 @@ class HardEncoder(
         setupEncoder()
     }
 
-    override fun audioEncode(buffer: ByteArray, size: Int) {
+    override fun start() {
+        mIsFirstVideoSampleWrite.set(false)
+        mIsFirstAudioSampleWrite.set(false)
+        mEndOfVideoStreamSignal.set(false)
+        mEndOfAudioStreamSignal.set(false)
+        mEndOfAudioVideoSignal.set(false)
+
+        try {
+            // audioRecord start
+            mAudioRecorder?.startRecording()
+            Log.i(TAG, "mAudioRecorder start")
+        } catch (e: java.lang.IllegalStateException) {
+            Log.i(TAG, "AudioRecorder start fail")
+            return
+        }
+
         try {
             // audio encoder start
             Log.i(TAG, "audioEncoder start")
             mAudioEncoder?.start()
+            // video encoder start
+            Log.i(TAG, "videoEncoder start")
+            mVideoEncoder?.start()
+
         } catch (e: java.lang.IllegalStateException) {
-            Log.i(TAG, "Audio encoder start fail", e)
+            Log.i(TAG, "Audio/Video encoder start fail", e)
             return
         }
 
         try {
             synchronized(mMuxerLock) {
                 mMuxer = initMediaMuxer()
-                //mMuxer!!.setOrientationHint(getRelativeRotation(attachedCamera))
             }
         } catch (e: IOException) {
-            Log.i(TAG, "MediaMuxer creation failed! $e")
+            Log.i(TAG, "MediaMuxer creation failed!", e)
             return
         }
-
+        mIsRecording = true
         mAudioHandler?.post { audioEncode() }
+        mVideoHandler?.post {
+            val errorOccurred: Boolean = videoEncode()
+            if (!errorOccurred) {
+                Log.i(TAG, "videoEncode complete")
+            }
+        }
+    }
+
+    override fun stop() {
+        mIsRecording = false
+    }
+
+    override fun audioEncode(buffer: ByteArray, size: Int) {
+    }
+
+    override fun videoEncode(buffer: ByteArray, width: Int, height: Int) {
+        Log.i(TAG, "videoEncode")
+        if(mIsRecording){
+            val pts: Long = System.nanoTime() / 1000 - mPresentTimeUs
+            var inBuffers: Array<ByteBuffer> = mVideoEncoder?.inputBuffers!!
+            val inBufferIndex: Int = mVideoEncoder?.dequeueInputBuffer(-1)!!
+            if (inBufferIndex >= 0) {
+                Log.i(TAG, "queueInputBuffer")
+                val bb = inBuffers[inBufferIndex]
+                bb.clear()
+                bb.put(buffer, 0, buffer.size)
+                mVideoEncoder?.queueInputBuffer(inBufferIndex, 0, buffer.size, pts, 0)
+            }
+        }
     }
 
 
-    @SuppressLint("UnsafeNewApiCall")
     @Throws(IOException::class)
     private fun initMediaMuxer(): MediaMuxer {
         val mediaMuxer: MediaMuxer
         if (outputFile != null) {
             //mSavedVideoUri = Uri.fromFile(outputFileOptions!!.getFile())
+            Log.e(TAG, "initMediaMuxer:" + outputFile!!.absoluteFile)
             mediaMuxer = MediaMuxer(
                 outputFile!!.absolutePath,
                 MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
@@ -134,24 +203,6 @@ class HardEncoder(
             )
         }
         return mediaMuxer
-    }
-
-    override fun videoEncode(buffer: ByteArray, width: Int, height: Int) {
-        try {
-            // video encoder start
-            Log.i(TAG, "videoEncoder start")
-            mVideoEncoder?.start()
-
-        } catch (e: java.lang.IllegalStateException) {
-            Log.i(TAG, "Video encoder start fail", e)
-            return
-        }
-        mVideoHandler?.post {
-            val errorOccurred: Boolean = videoEncode()
-            if (!errorOccurred) {
-                Log.i(TAG, "videoEncode complete")
-            }
-        }
     }
 
 
@@ -167,6 +218,8 @@ class HardEncoder(
             mAudioRecorder!!.release()
             mAudioRecorder = null
         }
+
+
     }
 
 
@@ -180,7 +233,7 @@ class HardEncoder(
         // Main encoding loop. Exits on end of stream.
         var errorOccurred = false
         var videoEos = false
-        while (!videoEos && !errorOccurred) {
+        while (!videoEos && !errorOccurred && mIsRecording) {
             // Check for end of stream from main thread
             if (mEndOfVideoStreamSignal.get()) {
                 mVideoEncoder?.signalEndOfInputStream()
@@ -192,6 +245,7 @@ class HardEncoder(
                 mVideoBufferInfo,
                 DEQUE_TIMEOUT_USEC.toLong()
             )
+
             when (outputBufferId) {
                 MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                     if (mMuxerStarted) {
@@ -199,6 +253,7 @@ class HardEncoder(
                         errorOccurred = true
                     }
                     synchronized(mMuxerLock) {
+                        Log.e(TAG, "mMuxer add video track")
                         mVideoTrackIndex = mMuxer?.addTrack(mVideoEncoder!!.outputFormat)!!
                         if (mAudioTrackIndex >= 0 && mVideoTrackIndex >= 0) {
                             mMuxerStarted = true
@@ -208,6 +263,7 @@ class HardEncoder(
                     }
                 }
                 MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                    Log.i(TAG, "INFO_TRY_AGAIN_LATER")
                 }
                 else -> videoEos = writeVideoEncodedBuffer(outputBufferId!!)
             }
@@ -222,6 +278,7 @@ class HardEncoder(
         try {
             // new MediaMuxer instance required for each new file written, and release current one.
             synchronized(mMuxerLock) {
+                Log.i(TAG, "Muxer release")
                 if (mMuxer != null) {
                     if (mMuxerStarted) {
                         mMuxer?.stop()
@@ -245,27 +302,48 @@ class HardEncoder(
     }
 
 
+
+
+
+
+
+    // when got encoded h264 es stream.
+    private fun onEncodedAnnexbFrame(es: ByteBuffer, bi: MediaCodec.BufferInfo) {
+        //writeVideoEncodedBuffer(outputBufferId!!)
+        /* mp4Muxer.writeSampleData(videoMp4Track, es.duplicate(), bi)
+         flvMuxer.writeSampleData(videoFlvTrack, es, bi)*/
+    }
+
+
+    // when got encoded aac raw stream.
+    private fun onEncodedAacFrame(es: ByteBuffer, bi: MediaCodec.BufferInfo) {
+        //mp4Muxer.writeSampleData(audioMp4Track, es.duplicate(), bi)
+        //flvMuxer.writeSampleData(audioFlvTrack, es, bi)
+    }
+
+
     fun audioEncode(): Boolean {
         // Audio encoding loop. Exits on end of stream.
         var audioEos = false
         var outIndex: Int
         var lastAudioTimestamp: Long = 0
-        while (!audioEos) {
+        while (!audioEos && mIsRecording) {
             // Check for end of stream from main thread
             if (mEndOfAudioStreamSignal.get()) {
                 mEndOfAudioStreamSignal.set(false)
+                mIsRecording = false
             }
 
             // get audio deque input buffer
             if (mAudioEncoder != null && mAudioRecorder != null) {
-                val index = mAudioEncoder?.dequeueInputBuffer(-1)!!
-                if (index >= 0) {
-                    val buffer = getInputBuffer(mAudioEncoder!!, index)
+                val inputBufferIndex = mAudioEncoder?.dequeueInputBuffer(-1)!!
+                if (inputBufferIndex >= 0) {
+                    val buffer = getInputBuffer(mAudioEncoder!!, inputBufferIndex)
                     buffer!!.clear()
                     val length = mAudioRecorder!!.read(buffer, mAudioBufferSize)
                     if (length > 0) {
                         mAudioEncoder?.queueInputBuffer(
-                            index,
+                            inputBufferIndex,
                             0,
                             length,
                             System.nanoTime() / 1000,
@@ -278,6 +356,7 @@ class HardEncoder(
                     outIndex = mAudioEncoder?.dequeueOutputBuffer(mAudioBufferInfo, 0)!!
                     when (outIndex) {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> synchronized(mMuxerLock) {
+                            Log.e(TAG, "mMuxer add audio track")
                             mAudioTrackIndex = mMuxer?.addTrack(mAudioEncoder?.outputFormat!!)!!
                             if (mAudioTrackIndex >= 0 && mVideoTrackIndex >= 0) {
                                 mMuxerStarted = true
@@ -285,6 +364,7 @@ class HardEncoder(
                             }
                         }
                         MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                            Log.i(TAG, "audio INFO_TRY_AGAIN_LATER")
                         }
                         else ->// Drops out of order audio frame if the frame's earlier than last
                             // frame.
@@ -292,9 +372,8 @@ class HardEncoder(
                                 audioEos = writeAudioEncodedBuffer(outIndex)
                                 lastAudioTimestamp = mAudioBufferInfo.presentationTimeUs
                             } else {
-                                Log.w(
-                                    TAG,
-                                    "Drops frame, current frame's timestamp "
+                                Log.e(
+                                    TAG, "Drops frame, current frame's timestamp "
                                             + mAudioBufferInfo.presentationTimeUs
                                             + " is earlier that last frame "
                                             + lastAudioTimestamp
@@ -336,15 +415,29 @@ class HardEncoder(
 
     /** Creates a [MediaFormat] using parameters from the configuration  */
     private fun createMediaFormat(): MediaFormat {
-        val format = MediaFormat.createVideoFormat(VIDEO_MIME_TYPE, rtmpClient.width, rtmpClient.height)
+
+        val format =
+            MediaFormat.createVideoFormat(VIDEO_MIME_TYPE, rtmpClient.width,rtmpClient.height)
         //颜色格式
-        format.setInteger(MediaFormat.KEY_COLOR_FORMAT, CodecCapabilities.COLOR_FormatSurface)
-        //码率
-        format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+        format.setInteger(
+            MediaFormat.KEY_COLOR_FORMAT,
+            CodecCapabilities.COLOR_FormatYUV420Flexible
+        )
+      /*  format.setInteger(
+            MediaFormat.KEY_COLOR_FORMAT,
+            CodecCapabilities.COLOR_FormatSurface
+        )*/
+
+
+        //码率 所需的比特率（以比特/秒为单位）
+        //format.setInteger(MediaFormat.KEY_BIT_RATE, bitRate)
+
+        format.setInteger(MediaFormat.KEY_BIT_RATE,  rtmpClient.width * rtmpClient.height * 3)
         //帧率
         format.setInteger(MediaFormat.KEY_FRAME_RATE, VFPS)
         //I 帧间隔
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VGOP/VFPS)
+        //format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VGOP/VFPS)
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
         return format
     }
 
@@ -367,16 +460,14 @@ class HardEncoder(
      * audio from selected audio source.
      */
     @UiThread
-    /* synthetic accessor */
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+            /* synthetic accessor */
+    //@RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun setupEncoder() {
-        Log.e(TAG,"setupEncoder")
-        try
-        {
+        Log.e(TAG, "setupEncoder")
+        try {
             mVideoEncoder = MediaCodec.createEncoderByType(VIDEO_MIME_TYPE)
             mAudioEncoder = MediaCodec.createEncoderByType(AUDIO_MIME_TYPE)
-        }catch (  e:java.io.IOException)
-        {
+        } catch (e: java.io.IOException) {
             throw IllegalStateException("Unable to create MediaCodec due to: " + e.cause)
         }
 
@@ -389,6 +480,9 @@ class HardEncoder(
             MediaCodec.CONFIGURE_FLAG_ENCODE
         )
 
+
+        // the referent PTS for video and audio encoder.
+        mPresentTimeUs = System.nanoTime() / 1000
         // audio encoder setup
         //setAudioParametersByCamcorderProfile(resolution, cameraId)
         mAudioEncoder?.reset()
@@ -399,20 +493,24 @@ class HardEncoder(
             mAudioRecorder?.release()
         }
         mAudioRecorder = chooseAudioRecord()
+
+        //mAudioRecorder = autoConfigAudioRecordSource()
+
         // check mAudioRecorder
         if (mAudioRecorder == null) {
             Log.e(TAG, "AudioRecord object cannot initialized correctly!")
         }
         mVideoTrackIndex = -1
         mAudioTrackIndex = -1
-        mMuxerStarted = false
 
+        mMuxerStarted = false
     }
 
 
     fun chooseAudioRecord(): AudioRecord? {
+        mAudioBufferSize = getPcmBufferSize();
         var mic: AudioRecord? = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION,mAudioSampleRate,
+            MediaRecorder.AudioSource.VOICE_COMMUNICATION, mAudioSampleRate,
             AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4
         )
         if (mic!!.state != AudioRecord.STATE_INITIALIZED) {
@@ -455,7 +553,7 @@ class HardEncoder(
             Log.e(TAG, "Output buffer should not have negative index: $bufferIndex")
             return false
         }
-        // Get data from buffer
+        // Get data from buffer  取出编码后的H264数据
         val outputBuffer = mVideoEncoder?.getOutputBuffer(bufferIndex)
 
         // Check if buffer is valid, if not then return
@@ -471,11 +569,13 @@ class HardEncoder(
             mVideoBufferInfo.presentationTimeUs = System.nanoTime() / 1000
             synchronized(mMuxerLock) {
                 if (!mIsFirstVideoSampleWrite.get()) {
-                    Log.i(TAG,
+                    Log.i(
+                        TAG,
                         "First video sample written."
                     )
                     mIsFirstVideoSampleWrite.set(true)
                 }
+                Log.i(TAG, "Write video data to mMuxer")
                 mMuxer?.writeSampleData(mVideoTrackIndex, outputBuffer, mVideoBufferInfo)
             }
         }
@@ -500,6 +600,7 @@ class HardEncoder(
                         )
                         mIsFirstAudioSampleWrite.set(true)
                     }
+                    Log.i(TAG, "Write audio data to mMuxer")
                     mMuxer?.writeSampleData(mAudioTrackIndex, buffer, mAudioBufferInfo)
                 }
             } catch (e: Exception) {
@@ -526,4 +627,6 @@ class HardEncoder(
     private fun getOutputBuffer(codec: MediaCodec, index: Int): ByteBuffer? {
         return codec.getOutputBuffer(index)
     }
+
+
 }

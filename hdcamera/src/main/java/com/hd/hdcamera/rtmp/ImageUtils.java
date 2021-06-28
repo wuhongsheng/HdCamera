@@ -20,6 +20,14 @@ public class ImageUtils {
     static ByteBuffer yuv420;
     static byte[] scaleBytes;
 
+    /**
+     * YUV420_888 to I420
+     * @param image
+     * @param rotationDegrees
+     * @param width
+     * @param height
+     * @return
+     */
     public static byte[] getBytes(ImageProxy image, int rotationDegrees, int width, int height) {
         if (image.getFormat() != ImageFormat.YUV_420_888) {
             // https://developer.android.google.cn/training/camerax/analyze
@@ -116,7 +124,7 @@ public class ImageUtils {
         int srcWidth = image.getWidth();
         int srcHeight = image.getHeight();
         byte[] result = yuv420.array();
-        //注意旋转后 宽高变了
+        //注意旋转后 宽高变了 摄像头原始数据是横向的需要旋转
         if (rotationDegrees == 90 || rotationDegrees == 270) {
             //todo jni对result修改值，避免内存抖动
             rotation(result, image.getWidth(), image.getHeight(), rotationDegrees);
@@ -141,7 +149,7 @@ public class ImageUtils {
     private native static void scale(byte[] src, byte[] dst, int srcWidth, int srcHeight, int dstWidth, int dstHeight);
 
 
-    //    nv21ToNV12
+    //nv21ToNV12
     public static void yuvToNv21(byte[] y, byte[] u, byte[] v, byte[] nv21, int stride, int height) {
         System.arraycopy(y, 0, nv21, 0, y.length);
         // 注意，若length值为 y.length * 3 / 2 会有数组越界的风险，需使用真实数据长度计算

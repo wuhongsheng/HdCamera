@@ -23,7 +23,7 @@ public class RtmpClient implements Encoder{
 
     private int bitRate = 640_000;
 
-
+    private int audio_bitRate = 44100;
 
     @Override
     public void audioEncode(@NotNull byte[] buffer, int size) {
@@ -44,6 +44,19 @@ public class RtmpClient implements Encoder{
             nativeDeInit();
         }
         encoder.releaseResources();
+    }
+
+    @Override
+    public void start() {
+        if(audioChannel != null){
+            audioChannel.start();
+        }
+        encoder.start();
+    }
+
+    @Override
+    public void stop() {
+        encoder.stop();
     }
 
 
@@ -67,11 +80,12 @@ public class RtmpClient implements Encoder{
     }
 
     public RtmpClient(EncodeStrategy encodeStrategy) {
+        nativeInit();
+        //初始化摄像头， 同时 创建编码器
+        initVideo(bitRate);
+        initAudio(audio_bitRate, 2);
         switch (encodeStrategy){
             case SOFT_ENCODER:
-                //初始化摄像头， 同时 创建编码器
-                initVideo(640_000);
-                initAudio(44100, 2);
                 encoder = new SoftEncoder();
                 break;
             case HARD_ENCODER:
@@ -80,18 +94,17 @@ public class RtmpClient implements Encoder{
             default:
                 throw new IllegalArgumentException("There's no such strategy yet.");
         }
-        nativeInit();
     }
 
 
 
     public RtmpClient(@NotNull File outputFile) {
-        encoder = new HardEncoder(this,outputFile);
+        Log.e(TAG,outputFile.getAbsolutePath());
         nativeInit();
+        initVideo(bitRate);
+        //initAudio(audio_bitRate, 2);
+        encoder = new HardEncoder(this,outputFile);
     }
-
-
-
 
 
     public void initVideo(int bitRate) {
@@ -120,7 +133,9 @@ public class RtmpClient implements Encoder{
     }
 
     public void startLive(String url) {
-        connect(url);
+        isConnectd = true;
+        start();
+        //connect(url);
     }
 
     /**
@@ -131,7 +146,7 @@ public class RtmpClient implements Encoder{
         this.isConnectd = isConnect;
         if(isConnect){
             Log.e(TAG, "服务器连接成功==================");
-            audioChannel.start();
+            start();
             Log.e(TAG, "开始直播==================");
             ToastUtils.showShort("服务器连接成功,开始直播");
         }else {
@@ -141,8 +156,10 @@ public class RtmpClient implements Encoder{
     }
 
     public void stopLive() {
-        //releaseResources();
-        audioChannel.stop();
+        stop();
+        if(audioChannel != null){
+            audioChannel.stop();
+        }
         isConnectd = false;
         disConnect();
         Log.e(TAG, "停止直播==================");
@@ -151,11 +168,9 @@ public class RtmpClient implements Encoder{
 
     public void sendVideo(byte[] buffer) {
         encoder.videoEncode(buffer,mWidth,mHeight);
-        //nativeSendVideo(buffer);
     }
 
     public void sendAudio(byte[] buffer, int len) {
-        //nativeSendAudio(buffer, len);
         encoder.audioEncode(buffer,len);
     }
 
