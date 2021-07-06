@@ -51,12 +51,15 @@ public class RtmpClient implements Encoder{
         if(audioChannel != null){
             audioChannel.start();
         }
-        encoder.start();
     }
 
     @Override
     public void stop() {
         encoder.stop();
+    }
+
+    public void encodeStart() {
+        encoder.start();
     }
 
 
@@ -66,18 +69,22 @@ public class RtmpClient implements Encoder{
         SOFT_ENCODER
     }
 
-
     private Encoder encoder;
-
     private boolean isConnectd;
+
+    public AudioChannel getAudioChannel() {
+        return audioChannel;
+    }
+
     private AudioChannel audioChannel;
 
-    public static final int VFPS = 24;
 
+    public static final int VFPS = 24;
 
     public RtmpClient() {
         nativeInit();
     }
+
 
     public RtmpClient(EncodeStrategy encodeStrategy) {
         nativeInit();
@@ -102,7 +109,7 @@ public class RtmpClient implements Encoder{
         Log.e(TAG,outputFile.getAbsolutePath());
         nativeInit();
         initVideo(bitRate);
-        //initAudio(audio_bitRate, 2);
+        initAudio(audio_bitRate, 2);
         encoder = new HardEncoder(this,outputFile);
     }
 

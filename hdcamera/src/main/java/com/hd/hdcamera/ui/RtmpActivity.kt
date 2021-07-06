@@ -235,7 +235,4 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
             stopLive()
         }
     }
-
-
-
 }

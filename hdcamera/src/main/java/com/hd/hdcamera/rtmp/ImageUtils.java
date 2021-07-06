@@ -126,13 +126,12 @@ public class ImageUtils {
         byte[] result = yuv420.array();
         //注意旋转后 宽高变了 摄像头原始数据是横向的需要旋转
         if (rotationDegrees == 90 || rotationDegrees == 270) {
-            //todo jni对result修改值，避免内存抖动
             rotation(result, image.getWidth(), image.getHeight(), rotationDegrees);
             srcWidth = image.getHeight();
             srcHeight = image.getWidth();
         }
         if (srcWidth != width || srcHeight != height) {
-            //todo jni对scaleBytes修改值，避免内存抖动
+            //YUVI420 内存计算
             int scaleSize = width * height * 3 / 2;
             if (scaleBytes == null || scaleBytes.length < scaleSize) {
                 scaleBytes = new byte[scaleSize];

@@ -19,6 +19,11 @@ public class AudioChannel {
     private Handler handler;
     private RtmpClient rtmpClient;
     private HandlerThread handlerThread;
+
+    public AudioRecord getAudioRecord() {
+        return audioRecord;
+    }
+
     private AudioRecord audioRecord;
     private byte[] buffer;
 
@@ -43,7 +48,7 @@ public class AudioChannel {
                 audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
                         sampleRate, channelConfig,
                         AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
-
+                rtmpClient.encodeStart();
                 audioRecord.startRecording();
                 while (audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
                     int len = audioRecord.read(buffer, 0, buffer.length);
