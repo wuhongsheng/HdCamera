@@ -45,7 +45,7 @@ public class AudioChannel {
         handler.post(new Runnable() {
             @Override
             public void run() {
-                audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                audioRecord = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION,
                         sampleRate, channelConfig,
                         AudioFormat.ENCODING_PCM_16BIT, minBufferSize);
                 rtmpClient.encodeStart();
@@ -60,6 +60,25 @@ public class AudioChannel {
             }
         });
     }
+
+
+   /* public AudioRecord chooseAudioRecord() {
+        AudioRecord mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, sampleRate,
+                AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
+        if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
+            mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, SrsEncoder.ASAMPLERATE,
+                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
+            if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
+                mic = null;
+            } else {
+                SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_MONO;
+            }
+        } else {
+            SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
+        }
+
+        return mic;
+    }*/
 
     public void stop() {
         if(audioRecord != null){

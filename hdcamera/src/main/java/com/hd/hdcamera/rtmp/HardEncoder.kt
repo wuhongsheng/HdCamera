@@ -37,6 +37,7 @@ class HardEncoder(
 
     /** Android preferred mime type for AVC video.  */
     private val VIDEO_MIME_TYPE = "video/avc"
+    //// 编码器类型，AAC
     private val AUDIO_MIME_TYPE = "audio/mp4a-latm"
 
     /** Amount of time to wait for dequeuing a buffer from the videoEncoder.  */
@@ -47,9 +48,10 @@ class HardEncoder(
     private var outputFile: File? = null
     val VFPS = 24
     val VGOP = 48
-    val mAudioSampleRate = 44100
-    val mAudioChannelCount = 2
+    //val mAudioSampleRate = 44100
+    //val mAudioChannelCount = 1
     private val mVideoBitRate = 640_000   // 640 kbps
+    //音频比特率64kbps
     val mAudioBitRate = 64 * 1024 // 64 kbps
 
 
@@ -57,7 +59,6 @@ class HardEncoder(
 
     /** audio raw data  */
     private var mAudioRecorder: AudioRecord? = null
-    private var mAudioBufferSize = 0
 
     /** The muxer that writes the encoding data to file.  */
     @GuardedBy("mMuxerLock")
@@ -113,8 +114,6 @@ class HardEncoder(
         mEndOfAudioVideoSignal.set(false)
 
         try {
-            //mAudioRecorder = chooseAudioRecord()
-            //mAudioRecorder = autoConfigAudioRecordSource()
             mAudioRecorder = rtmpClient.audioChannel.audioRecord
             // check mAudioRecorder
             if (mAudioRecorder == null) {
@@ -166,21 +165,6 @@ class HardEncoder(
 
     override fun audioEncode(buffer: ByteArray, size: Int) {
         if(mIsRecording){
-             /*val inputBufferIndex = mAudioEncoder?.dequeueInputBuffer(-1)!!
-             if (inputBufferIndex >= 0) {
-               val buffer = getInputBuffer(mAudioEncoder!!, inputBufferIndex)
-               buffer!!.clear()
-               val length = mAudioRecorder!!.read(buffer, size)
-               if (length > 0) {
-                   mAudioEncoder?.queueInputBuffer(
-                       inputBufferIndex,
-                       0,
-                       length,
-                       System.nanoTime() / 1000,
-                       MediaCodec.BUFFER_FLAG_END_OF_STREAM
-                   )
-               }
-           }*/
             val inBuffers: Array<ByteBuffer> = mAudioEncoder?.inputBuffers!!
             val inBufferIndex: Int = mAudioEncoder?.dequeueInputBuffer(-1)!!
             if (inBufferIndex >= 0) {
@@ -432,9 +416,10 @@ class HardEncoder(
     /** Creates a [MediaFormat] using parameters for audio from the configuration  */
     private fun createAudioMediaFormat(): MediaFormat {
         val format = MediaFormat.createAudioFormat(
-            AUDIO_MIME_TYPE, mAudioSampleRate,
-            mAudioChannelCount
+            AUDIO_MIME_TYPE, rtmpClient.mAudioSampleRate,
+            rtmpClient.mAudioChannelCount
         )
+        //// 芯片支持的AAC级别，LC
         format.setInteger(
             MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC
         )
@@ -443,64 +428,12 @@ class HardEncoder(
     }
 
 
-    // choose the right supported color format. @see below:
-    private fun chooseVideoEncoder(): Int {
-        // choose the encoder "video/avc":
-        //      1. select default one when type matched.
-        //      2. google avc is unusable.
-        //      3. choose qcom avc.
-        var vmci = selectCodec(VIDEO_MIME_TYPE)
-        //vmci = chooseVideoEncoder("google");
-        //vmci = chooseVideoEncoder("qcom");
-        var matchedColorFormat = 0
-        val cc: CodecCapabilities = vmci?.getCapabilitiesForType(VIDEO_MIME_TYPE)!!
-        for (i in cc.colorFormats.indices) {
-            val cf = cc.colorFormats[i]
-            Log.i(TAG, String.format("vencoder %s supports color fomart 0x%x(%d)", vmci.name, cf, cf))
-            // choose YUV for h.264, prefer the bigger one.
-            // corresponding to the color space transform in onPreviewFrame
-            if (cf >= CodecCapabilities.COLOR_FormatYUV420Planar && cf <= CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
-                if (cf > matchedColorFormat) {
-                    matchedColorFormat = cf
-                }
-            }
-        }
-        for (i in cc.profileLevels.indices) {
-            val pl = cc.profileLevels[i]
-            Log.i(TAG, String.format("vencoder %s support profile %d, level %d", vmci.name, pl.profile, pl.level))
-        }
-        Log.i(TAG, String.format("vencoder %s choose color format 0x%x(%d)", vmci.name, matchedColorFormat, matchedColorFormat
-            )
-        )
-        return matchedColorFormat
-    }
-
-
-    private fun selectCodec(mimeType: String): MediaCodecInfo? {
-        val numCodecs = MediaCodecList.getCodecCount()
-        for (i in 0 until numCodecs) {
-            val codecInfo = MediaCodecList.getCodecInfoAt(i)
-            if (!codecInfo.isEncoder) {
-                continue
-            }
-            val types = codecInfo.supportedTypes
-            for (j in types.indices) {
-                if (types[j].equals(mimeType, ignoreCase = true)) {
-                    return codecInfo
-                }
-            }
-        }
-        return null
-    }
-
 
     /**
      * Setup the [MediaCodec] for encoding video from a camera [Surface] and encoding
      * audio from selected audio source.
      */
     @UiThread
-            /* synthetic accessor */
-    //@RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun setupEncoder() {
         Log.e(TAG, "setupEncoder")
         try {
@@ -523,7 +456,6 @@ class HardEncoder(
         // the referent PTS for video and audio encoder.
         mPresentTimeUs = System.nanoTime() / 1000
         // audio encoder setup
-        //setAudioParametersByCamcorderProfile(resolution, cameraId)
         mAudioEncoder?.reset()
         mAudioEncoder?.configure(
             createAudioMediaFormat(), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE
@@ -540,41 +472,7 @@ class HardEncoder(
     }
 
 
- /*   fun chooseAudioRecord(): AudioRecord? {
-        mAudioBufferSize = getPcmBufferSize()
-        var mic: AudioRecord? = AudioRecord(
-            MediaRecorder.AudioSource.VOICE_COMMUNICATION, mAudioSampleRate,
-            AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4
-        )
-        if (mic!!.state != AudioRecord.STATE_INITIALIZED) {
-            mic = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                mAudioSampleRate,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                getPcmBufferSize() * 4
-            )
-            if (mic.state != AudioRecord.STATE_INITIALIZED) {
-                mic = null
-            } *//*else {
-                net.ossrs.yasea.SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_MONO
-            }*//*
-        } *//*else {
-            net.ossrs.yasea.SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO
-        }*//*
-        return mic
-    }
-*/
 
-  /*  private fun getPcmBufferSize(): Int {
-        val pcmBufSize = AudioRecord.getMinBufferSize(
-            mAudioSampleRate, AudioFormat.CHANNEL_IN_STEREO,
-            AudioFormat.ENCODING_PCM_16BIT
-        ) + 8191
-        return pcmBufSize - pcmBufSize % 8192
-    }
-
-*/
     /**
      * Write a buffer that has been encoded to file.
      *
@@ -588,10 +486,6 @@ class HardEncoder(
         }
         // Get data from buffer  取出编码后的H264数据
         val outputBuffer = mVideoEncoder?.getOutputBuffer(bufferIndex)
-        /*var data = ByteArray(mVideoBufferInfo.size)
-        outputBuffer?.get(data)
-        var bitmap = yuv2Bitmap2(data, 480, 640)*/
-
         // Check if buffer is valid, if not then return
         if (outputBuffer == null) {
             Log.d(TAG, "OutputBuffer was null.")

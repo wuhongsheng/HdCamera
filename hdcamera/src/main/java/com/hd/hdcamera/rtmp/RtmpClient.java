@@ -23,7 +23,54 @@ public class RtmpClient implements Encoder{
 
     private int bitRate = 640_000;
 
-    private int audio_bitRate = 44100;
+    public int mAudioSampleRate = 44100;
+
+    /**
+     * The number of audio channels used for the audio track
+     */
+    public int mAudioChannelCount=1;
+    //录像输出文件
+    private File outputFile;
+
+    public RtmpClient(Builder builder) {
+
+    }
+
+    private RtmpClient() {
+        nativeInit();
+    }
+
+
+    private RtmpClient(EncodeStrategy encodeStrategy) {
+        nativeInit();
+        //初始化摄像头， 同时 创建编码器
+        initVideo(bitRate);
+        initAudio(mAudioSampleRate, mAudioChannelCount);
+        switch (encodeStrategy){
+            case SOFT_ENCODER:
+                encoder = new SoftEncoder();
+                break;
+            case HARD_ENCODER:
+                encoder = new HardEncoder(this);
+                break;
+            default:
+                throw new IllegalArgumentException("There's no such strategy yet.");
+        }
+    }
+
+
+
+
+    public RtmpClient(@NotNull File outputFile) {
+        Log.e(TAG,outputFile.getAbsolutePath());
+        nativeInit();
+        initVideo(bitRate);
+        initAudio(mAudioSampleRate, mAudioChannelCount);
+        encoder = new HardEncoder(this,outputFile);
+    }
+
+
+
 
     @Override
     public void audioEncode(@NotNull byte[] buffer, int size) {
@@ -81,37 +128,6 @@ public class RtmpClient implements Encoder{
 
     public static final int VFPS = 24;
 
-    public RtmpClient() {
-        nativeInit();
-    }
-
-
-    public RtmpClient(EncodeStrategy encodeStrategy) {
-        nativeInit();
-        //初始化摄像头， 同时 创建编码器
-        initVideo(bitRate);
-        initAudio(audio_bitRate, 2);
-        switch (encodeStrategy){
-            case SOFT_ENCODER:
-                encoder = new SoftEncoder();
-                break;
-            case HARD_ENCODER:
-                encoder = new HardEncoder(this);
-                break;
-            default:
-                throw new IllegalArgumentException("There's no such strategy yet.");
-        }
-    }
-
-
-
-    public RtmpClient(@NotNull File outputFile) {
-        Log.e(TAG,outputFile.getAbsolutePath());
-        nativeInit();
-        initVideo(bitRate);
-        initAudio(audio_bitRate, 2);
-        encoder = new HardEncoder(this,outputFile);
-    }
 
 
     public void initVideo(int bitRate) {
@@ -140,6 +156,7 @@ public class RtmpClient implements Encoder{
     }
 
     public void startLive(String url) {
+        ToastUtils.showShort("开始直播");
         isConnectd = true;
         start();
         //connect(url);
@@ -173,6 +190,19 @@ public class RtmpClient implements Encoder{
         ToastUtils.showShort("停止直播");
     }
 
+    public static class Builder{
+        private EncodeStrategy encodeStrategy;
+
+
+        public void setEncodeStrategy(EncodeStrategy encodeStrategy){
+            this.encodeStrategy = encodeStrategy;
+        }
+
+        public RtmpClient build(){
+            return new RtmpClient(this);
+        }
+    }
+
     public void sendVideo(byte[] buffer) {
         encoder.videoEncode(buffer,mWidth,mHeight);
     }
@@ -180,9 +210,6 @@ public class RtmpClient implements Encoder{
     public void sendAudio(byte[] buffer, int len) {
         encoder.audioEncode(buffer,len);
     }
-
-
-
 
 
     private native void connect(String url);
