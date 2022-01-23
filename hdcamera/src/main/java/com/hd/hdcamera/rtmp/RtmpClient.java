@@ -14,7 +14,7 @@ import java.io.File;
  * @author whs
  * @date 2021/5/31
  */
-public class RtmpClient implements Encoder{
+public class RtmpClient implements IEncoder {
     static {
         System.loadLibrary("native-lib");
     }
@@ -22,24 +22,29 @@ public class RtmpClient implements Encoder{
     private int mWidth = 480, mHeight = 640;
 
     private int bitRate = 640_000;
-
+    //音频采样率
     public int mAudioSampleRate = 44100;
-
-    /**
-     * The number of audio channels used for the audio track
-     */
+    //音频声道数
     public int mAudioChannelCount=1;
     //录像输出文件
     private File outputFile;
 
     public RtmpClient(Builder builder) {
-
-    }
-
-    private RtmpClient() {
         nativeInit();
+        //初始化摄像头， 同时 创建编码器
+        initVideo(bitRate);
+        initAudio(mAudioSampleRate, mAudioChannelCount);
+        switch (builder.encodeStrategy){
+            case SOFT_ENCODER:
+                encoder = new SoftEncoder();
+                break;
+            case HARD_ENCODER:
+                encoder = new HardEncoder(this);
+                break;
+            default:
+                throw new IllegalArgumentException("There's no such strategy yet.");
+        }
     }
-
 
     private RtmpClient(EncodeStrategy encodeStrategy) {
         nativeInit();
@@ -57,8 +62,6 @@ public class RtmpClient implements Encoder{
                 throw new IllegalArgumentException("There's no such strategy yet.");
         }
     }
-
-
 
 
     public RtmpClient(@NotNull File outputFile) {
@@ -116,7 +119,7 @@ public class RtmpClient implements Encoder{
         SOFT_ENCODER
     }
 
-    private Encoder encoder;
+    private IEncoder encoder;
     private boolean isConnectd;
 
     public AudioChannel getAudioChannel() {
@@ -125,13 +128,12 @@ public class RtmpClient implements Encoder{
 
     private AudioChannel audioChannel;
 
-
-    public static final int VFPS = 24;
-
+    //帧率
+    public static final int FPS = 24;
 
 
     public void initVideo(int bitRate) {
-        initVideoEnc(mWidth, mHeight, VFPS, bitRate);
+        initVideoEnc(mWidth, mHeight, FPS, bitRate);
     }
 
 
@@ -191,9 +193,8 @@ public class RtmpClient implements Encoder{
     }
 
     public static class Builder{
-        private EncodeStrategy encodeStrategy;
-
-
+        //默认使用软解
+        private EncodeStrategy encodeStrategy = EncodeStrategy.SOFT_ENCODER;
         public void setEncodeStrategy(EncodeStrategy encodeStrategy){
             this.encodeStrategy = encodeStrategy;
         }
@@ -217,6 +218,8 @@ public class RtmpClient implements Encoder{
     private native void disConnect();
 
     private native void nativeInit();
+
+    private native void nativeConfig(boolean isHardEncoder);
 
     private native void initVideoEnc(int width, int height, int fps, int bitRate);
 

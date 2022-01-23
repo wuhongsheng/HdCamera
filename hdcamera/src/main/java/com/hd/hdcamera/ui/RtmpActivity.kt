@@ -67,14 +67,11 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
     companion object {
         private val TAG = RtmpActivity::class.java.simpleName
         private const val rtmpUrl = "rtmp://172.16.0.178/live/livestream"
-
         private const val REQUEST_CODE_PERMISSIONS = 10
 
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
         //默认启用后置摄像头
         private var lensFacing = CameraSelector.LENS_FACING_BACK
-
-
         /** Creates a [File] named with the current date and time */
         private fun createRecordFile(context: Context, extension: String): File {
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.CHINA)
@@ -113,8 +110,6 @@ class RtmpActivity : AppCompatActivity(), View.OnClickListener {
 
         rtmpClient = RtmpClient(outputFile)
         //rtmpClient = RtmpClient(RtmpClient.EncodeStrategy.SOFT_ENCODER)
-
-
 
     }
 
